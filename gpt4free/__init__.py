@@ -1,5 +1,6 @@
 from enum import Enum
 
+from gpt4free import phind
 from gpt4free import cocalc
 from gpt4free import forefront
 from gpt4free import quora
@@ -11,6 +12,7 @@ from gpt4free import you
 class Provider(Enum):
     """An enum representing  different providers."""
 
+    Phind = 'phind'
     You = 'you'
     Poe = 'poe'
     ForeFront = 'fore_front'
@@ -34,6 +36,8 @@ class Completion:
         """
         if provider == Provider.Poe:
             return Completion.__poe_service(prompt, **kwargs)
+        elif provider == Provider.Phind:
+            return Completion.__phind_service(prompt, **kwargs)
         elif provider == Provider.You:
             return Completion.__you_service(prompt, **kwargs)
         elif provider == Provider.ForeFront:
@@ -46,6 +50,10 @@ class Completion:
             return Completion.__useless_service(prompt, **kwargs)
         else:
             raise Exception('Provider not exist, Please try again')
+
+    @staticmethod
+    def __phind_service(prompt: str, **kwargs) -> str:
+        return phind.Completion.create(prompt=prompt, **kwargs).text
 
     @staticmethod
     def __useless_service(prompt: str, **kwargs) -> str:
