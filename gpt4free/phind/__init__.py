@@ -1,7 +1,10 @@
-from urllib.parse import quote
-from tls_client import Session
-from time import time
 from datetime import datetime
+from time import time
+from urllib.parse import quote
+
+from tls_client import Session
+
+MAX_CHARS_CONTEXT = 6000
 
 client = Session(client_identifier='chrome110')
 client.headers = {
@@ -85,6 +88,12 @@ class Search:
             'browserLanguage': language}).json()['rawBingResults']
 
 
+def shrink_if_too_big(input_str):
+    if len(input_str) > MAX_CHARS_CONTEXT:
+        return input_str.replace(" ", "").replace("\n", "").replace("\t", "")
+    return input_str
+
+
 class Completion:
     def create(
             model='gpt-4',
@@ -92,14 +101,23 @@ class Completion:
             results: dict = None,
             creative: bool = False,
             detailed: bool = False,
-            codeContext: str = '',
-            language: str = 'en') -> PhindResponse:
+            code_context: str = '',
+            language: str = 'en',
+            shrink_context: bool = True,
+            cutoff: bool = True) -> PhindResponse:
 
         if results is None:
             results = Search.create(prompt, actualSearch=True)
 
-        if len(codeContext) > 2999:
-            raise ValueError('codeContext must be less than 3000 characters')
+        if shrink_context:
+            code_context = shrink_if_too_big(code_context)
+
+        if len(code_context) + len(prompt) > MAX_CHARS_CONTEXT:
+            if cutoff:
+                code_context = code_context[:5999 - len(prompt)]
+            else:
+                raise ValueError(
+                    f'prompt and codeContext must be less than 6000 characters, currently {len(prompt)} and {len(code_context)}')
 
         models = {
             'gpt-4': 'expert',
@@ -110,7 +128,7 @@ class Completion:
         json_data = {
             'question': prompt,
             'bingResults': results,  # response.json()['rawBingResults'],
-            'codeContext': codeContext,
+            'codeContext': code_context,
             'options': {
                 'skill': models[model],
                 'date': datetime.now().strftime("%d/%m/%Y"),
